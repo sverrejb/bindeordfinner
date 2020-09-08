@@ -9,6 +9,8 @@ import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
 import Url
+import Debug
+import Html exposing (header)
 
 
 
@@ -21,12 +23,11 @@ main =
 
 -- MODEL
 
-type alias Model =
-    { first : String
-    , second : String
-    , result : SearchResult
-    }
-
+type Model =
+    Failiure
+    | Initial
+    | Loading
+    | Success SearchResult
 
 type alias QueryBody =
     { first : String, second : String }
@@ -41,7 +42,7 @@ type alias SearchResult =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Model "flaske" "horn" <| SearchResult [ "post", "for" ] [] [], Cmd.none )
+    ( Initial, Cmd.none)
 
 
 
@@ -51,20 +52,21 @@ init _ =
 type Msg
     = Search QueryBody
     | GotSearchResult (Result Http.Error SearchResult)
-    | Pass
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Search queryBody ->
-            ( model, doSearch queryBody )
+            ( Loading, doSearch queryBody )
 
-        Pass ->
-            ( model, Cmd.none )
-
-        GotSearchResult _ ->
-            ( model, Cmd.none )
+        GotSearchResult result ->
+            case result of
+            Ok resultBody ->
+                (Success resultBody, Cmd.none)
+            Err err ->
+                (Debug.log <| Debug.toString err)
+                (Failiure, Cmd.none)
 
 
 
@@ -73,17 +75,32 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-   main_ [] [
-            h1 [] [ text "Finn bindeordet" ]
-            , p [] [ text "Fyll inn start og sluttordet for å finne bindeordet i midten" ]
-            , input [ placeholder model.first ] []
-            , ul [] (List.map (\l -> li [] [ text l ]) model.result.solutions)
-            , input [ placeholder model.second ] []
-            , button [ onClick <| Search (QueryBody "foo" "bar") ] [ text "SØK" ]
-   ]
-            
+    div [] [ header [] [ h1 [] [ text "Bindeordfinner"]],
+    main_ [] [
+        p [] [ text "Fyll inn start og sluttordet for å finne bindeordet i midten" ],
+    viewApp model]]
+   
 
+viewApp : Model -> Html Msg
+viewApp model = 
+    case model of
+    Failiure -> span [] [text "noe gikk galt"]
+    Initial -> viewForm model
+    Loading -> viewLoading
+    Success result -> viewResult result
 
+viewForm : Model -> Html Msg
+viewForm model = main_ [] [input [ placeholder "smør" ] []
+            , ul [] (List.map (\l -> li [] [ text l ]) ["klatt"])
+            , input [ placeholder "maler" ] []
+            , button [ onClick <| Search (QueryBody "smør" "maler") ] [ text "SØK" ]]
+
+viewResult : SearchResult -> Html Msg
+viewResult result =
+    text "hurra"
+
+viewLoading : Html Msg
+viewLoading = text "Laster ..."
 
 -- HTTP
 
@@ -109,9 +126,9 @@ resultDecoder : Decoder SearchResult
 resultDecoder =
     Decode.map3
         SearchResult
-        (Decode.field "first" Decode.string |> Decode.list)
-        (Decode.field "startsWith" Decode.string |> Decode.list)
-        (Decode.field "endsWith" Decode.string |> Decode.list)
+        (Decode.field "solutions" (list string))
+        (Decode.field "startsWith" (list string))
+        (Decode.field "endsWith" (list string))
 
 
 
@@ -120,4 +137,4 @@ resultDecoder =
 
 apiUrl : String
 apiUrl =
-    "https://1bcdrx2x9c.execute-api.us-east-1.amazonaws.com/default/findGlueWords"
+    "https://1bcdrx2x9c.execute-api.us-east-1.amazonaws.com/findGlueWords"
