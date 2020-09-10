@@ -2,15 +2,15 @@ module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch,
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (Html, button, div, h1, input, li, main_, p, span, text, ul)
+import Html exposing (Html, button, div, h1, header, input, li, main_, p, span, text, ul)
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
 import Url
-import Debug
-import Html exposing (header)
+import Html.Events exposing (onInput)
+import Html exposing (h2)
 
 
 
@@ -21,19 +21,28 @@ main =
     Browser.element { init = init, subscriptions = \_ -> Sub.none, update = update, view = view }
 
 
+
 -- MODEL
 
-type Model =
-    Failiure
-    | Initial
+
+type alias Model =
+    { first : String
+    , second : String
+    , result : SearchResult
+    }
+
+
+type SearchResult
+    = Failiure
     | Loading
-    | Success SearchResult
+    | Success SearchResultBody
+
 
 type alias QueryBody =
     { first : String, second : String }
 
 
-type alias SearchResult =
+type alias SearchResultBody =
     { solutions : List String
     , startsWith : List String
     , endsWith : List String
@@ -42,7 +51,7 @@ type alias SearchResult =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Initial, Cmd.none)
+    ( Model firstPlaceholder secondPlaceholder <| Success <| SearchResultBody ["eple", "farge"] [] [], Cmd.none )
 
 
 
@@ -51,23 +60,30 @@ init _ =
 
 type Msg
     = Search QueryBody
-    | GotSearchResult (Result Http.Error SearchResult)
+    | GotSearchResult (Result Http.Error SearchResultBody)
+    | UpdateFirst String
+    | UpdateSecond String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Search queryBody ->
-            ( Loading, doSearch queryBody )
+            ( { model | result = Loading }, doSearch queryBody )
 
         GotSearchResult result ->
             case result of
-            Ok resultBody ->
-                (Success resultBody, Cmd.none)
-            Err err ->
-                (Debug.log <| Debug.toString err)
-                (Failiure, Cmd.none)
+                Ok searchResultBody ->
+                    ( { model | result = Success searchResultBody }, Cmd.none )
 
+                Err err ->
+                    ( { model | result = Failiure }, Cmd.none )
+        
+        UpdateFirst newFirst ->
+            ( { model | first = newFirst }, Cmd.none)
+        
+        UpdateSecond newSecond ->
+            ( { model | second = newSecond}, Cmd.none)
 
 
 -- VIEW
@@ -75,32 +91,50 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div [] [ header [] [ h1 [] [ text "Bindeordfinner"]],
-    main_ [] [
-        p [] [ text "Fyll inn start og sluttordet for å finne bindeordet i midten" ],
-    viewApp model]]
-   
+    div []
+        [ header [] [ h1 [] [ text "Bindeordfinner" ] ]
+        , main_ []
+            [ p [] [ text "Fyll inn start og sluttordet for å finne bindeordet i midten" ]
+            , viewApp model
+            ]
+        ]
+
 
 viewApp : Model -> Html Msg
-viewApp model = 
-    case model of
-    Failiure -> span [] [text "noe gikk galt"]
-    Initial -> viewForm model
-    Loading -> viewLoading
-    Success result -> viewResult result
+viewApp model =
+    main_ []
+        [ input [ placeholder firstPlaceholder, onInput UpdateFirst ] []
+        , input [ placeholder secondPlaceholder, onInput UpdateSecond ] []
+        , button [ onClick <| Search (QueryBody model.first model.second) ] [ text "SØK" ]
+        , viewResult model.result
+        ]
 
-viewForm : Model -> Html Msg
-viewForm model = main_ [] [input [ placeholder "smør" ] []
-            , ul [] (List.map (\l -> li [] [ text l ]) ["klatt"])
-            , input [ placeholder "maler" ] []
-            , button [ onClick <| Search (QueryBody "smør" "maler") ] [ text "SØK" ]]
 
 viewResult : SearchResult -> Html Msg
 viewResult result =
-    text "hurra"
+    case result of
+        Loading ->
+            viewLoading
+
+        Success solutionResponse ->
+            div [] [h2 [] [text "Mulige løsninger:"]
+            ,ul [] (List.map (\l -> li [] [ text l ]) solutionResponse.solutions)]
+            
+
+        Failiure ->
+            viewFailiure
+
 
 viewLoading : Html Msg
-viewLoading = text "Laster ..."
+viewLoading =
+    text "Laster ..."
+
+
+viewFailiure : Html Msg
+viewFailiure =
+    text "Noe gikk galt. Prøv igjen."
+
+
 
 -- HTTP
 
@@ -122,10 +156,10 @@ queryEncoder queryBody =
         ]
 
 
-resultDecoder : Decoder SearchResult
+resultDecoder : Decoder SearchResultBody
 resultDecoder =
     Decode.map3
-        SearchResult
+        SearchResultBody
         (Decode.field "solutions" (list string))
         (Decode.field "startsWith" (list string))
         (Decode.field "endsWith" (list string))
@@ -138,3 +172,9 @@ resultDecoder =
 apiUrl : String
 apiUrl =
     "https://1bcdrx2x9c.execute-api.us-east-1.amazonaws.com/findGlueWords"
+
+firstPlaceholder : String
+firstPlaceholder = "øye"
+
+secondPlaceholder : String
+secondPlaceholder = "kart"
