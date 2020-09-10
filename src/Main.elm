@@ -51,7 +51,7 @@ type alias SearchResultBody =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Model firstPlaceholder secondPlaceholder <| Success <| SearchResultBody ["eple", "farge"] [] [], Cmd.none )
+    ( Model firstPlaceholder secondPlaceholder <| Success <| SearchResultBody resultsPlaceholder [] [], Cmd.none )
 
 
 
@@ -118,11 +118,15 @@ viewResult result =
 
         Success solutionResponse ->
             div [] [h2 [] [text "Mulige løsninger:"]
-            ,ul [] (List.map (\l -> li [] [ text l ]) solutionResponse.solutions)]
+            ,ul [] (List.map (\l -> viewResultItem l) solutionResponse.solutions)]
             
 
         Failiure ->
             viewFailiure
+
+viewResultItem : String -> Html Msg
+viewResultItem resultItem =
+    li [] [text resultItem]
 
 
 viewLoading : Html Msg
@@ -178,3 +182,6 @@ firstPlaceholder = "øye"
 
 secondPlaceholder : String
 secondPlaceholder = "kart"
+
+resultsPlaceholder: List String
+resultsPlaceholder = ["eple", "farge"]
