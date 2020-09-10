@@ -132,12 +132,12 @@ viewResultItem resultItem =
 
 viewLoading : Html Msg
 viewLoading =
-    text "Laster ..."
+    p [] [ text "Laster ..." ]
 
 
 viewFailiure : Html Msg
 viewFailiure =
-    text "Noe gikk galt. Prøv igjen."
+    p [] [ text "Noe gikk galt. Prøv igjen." ]
 
 
 
