@@ -2,15 +2,13 @@ module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch,
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (Html, button, div, h1, header, input, li, main_, p, span, text, ul)
+import Html exposing (Html, button, div, h1, h2, header, input, li, main_, p, span, text, ul)
 import Html.Attributes exposing (placeholder)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
 import Url
-import Html.Events exposing (onInput)
-import Html exposing (h2)
 
 
 
@@ -78,12 +76,13 @@ update msg model =
 
                 Err err ->
                     ( { model | result = Failiure }, Cmd.none )
-        
+
         UpdateFirst newFirst ->
-            ( { model | first = newFirst }, Cmd.none)
-        
+            ( { model | first = newFirst }, Cmd.none )
+
         UpdateSecond newSecond ->
-            ( { model | second = newSecond}, Cmd.none)
+            ( { model | second = newSecond }, Cmd.none )
+
 
 
 -- VIEW
@@ -117,16 +116,18 @@ viewResult result =
             viewLoading
 
         Success solutionResponse ->
-            div [] [h2 [] [text "Mulige løsninger:"]
-            ,ul [] (List.map (\l -> viewResultItem l) solutionResponse.solutions)]
-            
+            div []
+                [ h2 [] [ text "Mulige løsninger:" ]
+                , ul [] (List.map (\l -> viewResultItem l) solutionResponse.solutions)
+                ]
 
         Failiure ->
             viewFailiure
 
+
 viewResultItem : String -> Html Msg
 viewResultItem resultItem =
-    li [] [text resultItem]
+    li [] [ text resultItem ]
 
 
 viewLoading : Html Msg
@@ -177,11 +178,17 @@ apiUrl : String
 apiUrl =
     "https://1bcdrx2x9c.execute-api.us-east-1.amazonaws.com/findGlueWords"
 
+
 firstPlaceholder : String
-firstPlaceholder = "øye"
+firstPlaceholder =
+    "øye"
+
 
 secondPlaceholder : String
-secondPlaceholder = "kart"
+secondPlaceholder =
+    "kart"
 
-resultsPlaceholder: List String
-resultsPlaceholder = ["eple", "farge"]
+
+resultsPlaceholder : List String
+resultsPlaceholder =
+    [ "eple", "farge" ]
