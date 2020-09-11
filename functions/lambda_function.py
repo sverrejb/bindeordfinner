@@ -31,10 +31,10 @@ def find_glueword(first_word, second_word):
         with open(wordlist, 'r', encoding='utf-8') as file:
             for line in file.readlines():
                 word = line.lower().split(" ")[0].strip()
-                if word.startswith(first_word):
+                if word.startswith(first_word) and not word == first_word:
                     starts_with_first.add(word.replace(first_word, ''))
                     continue
-                if word.endswith(second_word):
+                if word.endswith(second_word) and not word == second_word:
                     ends_with_second.add(word.replace(second_word, ''))
 
 

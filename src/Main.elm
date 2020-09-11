@@ -1,14 +1,15 @@
 module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch, init, main, queryEncoder, resultDecoder, update, view)
 
 import Browser
-import Browser.Navigation as Nav
-import Html exposing (Html, button, div, h1, h2, header, input, li, main_, p, span, text, ul)
+import Html exposing (Html, button, div, h1, h2, header, input, li, main_, p, text, ul)
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
-import Url
+import String.Interpolate exposing (interpolate)
+import Html exposing (source)
+import Html exposing (h3)
 
 
 
@@ -37,11 +38,15 @@ type SearchResult
 
 
 type alias QueryBody =
-    { first : String, second : String }
+    { first : String
+    , second : String
+    }
 
 
 type alias SearchResultBody =
-    { solutions : List String
+    { firstWord : String
+    , secondWord : String
+    , solutions : List String
     , startsWith : List String
     , endsWith : List String
     }
@@ -49,7 +54,7 @@ type alias SearchResultBody =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Model firstPlaceholder secondPlaceholder <| Success <| SearchResultBody resultsPlaceholder [] [], Cmd.none )
+    ( Model firstPlaceholder secondPlaceholder <| Success <| SearchResultBody firstPlaceholder secondPlaceholder resultsPlaceholder [] [], Cmd.none )
 
 
 
@@ -74,7 +79,7 @@ update msg model =
                 Ok searchResultBody ->
                     ( { model | result = Success searchResultBody }, Cmd.none )
 
-                Err err ->
+                Err _ ->
                     ( { model | result = Failiure }, Cmd.none )
 
         UpdateFirst newFirst ->
@@ -93,7 +98,7 @@ view model =
     div []
         [ header [] [ h1 [] [ text "Bindeordfinner" ] ]
         , main_ []
-            [ p [] [ text "Fyll inn start og sluttordet for å finne bindeordet i midten" ]
+            [ p [] [ text "Fyll inn start- og sluttordet for å finne bindeordet i midten" ]
             , viewApp model
             ]
         ]
@@ -116,23 +121,46 @@ viewResult result =
             viewLoading
 
         Success solutionResponse ->
-            div []
-                [ h2 [] [ text "Mulige løsninger:" ]
-                , ul [] (List.map (\l -> viewResultItem l) solutionResponse.solutions)
-                ]
+            if List.length solutionResponse.solutions > 0 then
+                div []
+                    [ h2 [] [ text "Mulige løsninger:" ]
+                    , ul [] (List.map (\l -> viewResultItem l solutionResponse.firstWord solutionResponse.secondWord) solutionResponse.solutions)
+                    ]
+
+            else
+                div []
+                    [ h2 [] [ text "Ingen nøyaktige treff" ]
+                    , p [] [ text "Viser ord som slutter og starter på søkeordene." ]
+                    , viewFirstList solutionResponse.startsWith
+                    , viewSecondList solutionResponse.endsWith
+                    ]
 
         Failiure ->
             viewFailiure
 
 
-viewResultItem : String -> Html Msg
-viewResultItem resultItem =
-    li [] [ text resultItem ]
+viewResultItem : String -> String -> String -> Html Msg
+viewResultItem resultItem firstWord secondWord =
+    li [] [ text <| interpolate "{0} - som gir {1}{0} og {0}{2}" [ resultItem, firstWord, secondWord ] ]
 
 
 viewLoading : Html Msg
 viewLoading =
     p [] [ text "Laster ..." ]
+
+viewFirstList : List String -> Html Msg
+viewFirstList list =
+    div [] [
+        h3 [] [text "Ord som slutter med"]
+        ,ul [] (List.map (\l -> li [] [text l]) list)
+    ]
+
+viewSecondList : List String -> Html Msg
+viewSecondList list =
+    div [] [
+        h3 [] [text "Ord som starter med"]
+        ,ul [] (List.map (\l -> li [] [text l]) list)
+    ]
 
 
 viewFailiure : Html Msg
@@ -163,8 +191,10 @@ queryEncoder queryBody =
 
 resultDecoder : Decoder SearchResultBody
 resultDecoder =
-    Decode.map3
+    Decode.map5
         SearchResultBody
+        (Decode.field "firstWord" string)
+        (Decode.field "secondWord" string)
         (Decode.field "solutions" (list string))
         (Decode.field "startsWith" (list string))
         (Decode.field "endsWith" (list string))
