@@ -41,6 +41,8 @@ def find_glueword(first_word, second_word):
 
     solutions = [x for x in list(starts_with_first.intersection(ends_with_second)) if x != ""]
     solutions_response = {
+        "firstWord": first_word,
+        "secondWord": second_word,
         "solutions": solutions,
         "startsWith": list(starts_with_first),
         "endsWith": list(ends_with_second)
