@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - run: zip lambda.zip /functions/wordlist.txt lambda_function.py
-      - uses: yvesgurcan/deploy-lambda-function
+      - uses: yvesgurcan/deploy-lambda-function@v0.0.5
         with:
           package: lambda.zip
           function-name: findGlueWords
