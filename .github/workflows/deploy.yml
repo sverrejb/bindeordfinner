@@ -11,7 +11,7 @@ jobs:
     steps: 
       - uses: actions/checkout@master
       - uses: justgook/setup-elm@1.2.0
-      - run:  elm make .\src\Main.elm --optimize --output=build/index.html
+      - run: elm make src/Main.elm --optimize --output=build/index.html
       - uses: JamesIves/github-pages-deploy-action@3.6.1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
