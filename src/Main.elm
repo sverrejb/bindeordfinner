@@ -129,10 +129,10 @@ viewResult result =
 
             else
                 div []
-                    [ h2 [] [ text "Ingen nøyaktige treff" ]
-                    , p [] [ text "Viser ord som slutter og starter på søkeordene." ]
-                    , viewFirstList solutionResponse.startsWith
-                    , viewSecondList solutionResponse.endsWith
+                    [ h2 [] [ text "Ingen nøyaktige treff." ]
+                    , p [] [ text "Viser ord som slutter og starter på søkeordene. Kanskje du finner svaret likevel?"]
+                    , viewFirstList solutionResponse.startsWith solutionResponse.firstWord
+                    , viewSecondList solutionResponse.endsWith solutionResponse.secondWord
                     ]
 
         Failiure ->
@@ -148,18 +148,18 @@ viewLoading : Html Msg
 viewLoading =
     p [] [ text "Laster ..." ]
 
-viewFirstList : List String -> Html Msg
-viewFirstList list =
+viewFirstList : List String -> String -> Html Msg
+viewFirstList list firstWord =
     div [] [
-        h3 [] [text "Ord som slutter med"]
-        ,ul [] (List.map (\l -> li [] [text l]) list)
+        h3 [] [text "Ord som starter med \"",  text firstWord, text "\""]
+        ,ul [] (List.map (\l -> li [] [text firstWord, text l]) list)
     ]
 
-viewSecondList : List String -> Html Msg
-viewSecondList list =
+viewSecondList : List String -> String -> Html Msg
+viewSecondList list secondWord =
     div [] [
-        h3 [] [text "Ord som starter med"]
-        ,ul [] (List.map (\l -> li [] [text l]) list)
+        h3 [] [text "Ord som slutter med \"", text secondWord, text "\""]
+        ,ul [] (List.map (\l -> li [] [text l, text secondWord]) list)
     ]
 
 
