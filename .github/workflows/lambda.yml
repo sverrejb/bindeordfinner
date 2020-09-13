@@ -1,5 +1,4 @@
 - name: Deploy AWS Lambda function
-  uses: yvesgurcan/deploy-lambda-function@v0.0.5
 
 on:
   push:
