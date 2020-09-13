@@ -57,6 +57,6 @@ def find_glueword(first_word, second_word):
 
 if __name__ == "__main__":
 
-    for pair in [("smør","maler")]:
+    for pair in [("gir","skudd")]:
         a,b = pair
         print(find_glueword(a, b))
