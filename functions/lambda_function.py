@@ -45,6 +45,9 @@ def find_glueword(first_word, second_word):
     startsWith = sorted(list(starts_with_first))
     endsWith = sorted(list(ends_with_second))
 
+    endsWith = [x for x in endsWith if len(x) > 1]
+    startsWith = [x for x in startsWith if len(x) > 1]
+
     solutions_response = {
         "firstWord": first_word,
         "secondWord": second_word,
