@@ -1,21 +1,20 @@
 module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch, init, main, queryEncoder, resultDecoder, update, view)
 
 import Browser
-import Html exposing (Html, button, div, h1, h2, header, input, li, main_, p, text, ul)
+import Html exposing (Html, button, div, h1, h2, h3, header, input, li, main_, p, text, ul)
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
 import String.Interpolate exposing (interpolate)
-import Html exposing (source)
-import Html exposing (h3)
 
 
 
 -- MAIN
 
 
+main : Program () Model Msg
 main =
     Browser.element { init = init, subscriptions = \_ -> Sub.none, update = update, view = view }
 
@@ -130,7 +129,7 @@ viewResult result =
             else
                 div []
                     [ h2 [] [ text "Ingen nøyaktige treff." ]
-                    , p [] [ text "Viser ord som slutter og starter på søkeordene. Kanskje du finner svaret likevel?"]
+                    , p [] [ text "Viser ord som slutter og starter på søkeordene. Kanskje du finner svaret likevel?" ]
                     , viewFirstList solutionResponse.startsWith solutionResponse.firstWord
                     , viewSecondList solutionResponse.endsWith solutionResponse.secondWord
                     ]
@@ -148,19 +147,21 @@ viewLoading : Html Msg
 viewLoading =
     p [] [ text "Laster ..." ]
 
+
 viewFirstList : List String -> String -> Html Msg
 viewFirstList list firstWord =
-    div [] [
-        h3 [] [text "Ord som starter med \"",  text firstWord, text "\""]
-        ,ul [] (List.map (\l -> li [] [text firstWord, text l]) list)
-    ]
+    div []
+        [ h3 [] [ text "Ord som starter med \"", text firstWord, text "\"" ]
+        , ul [] (List.map (\l -> li [] [ text firstWord, text l ]) list)
+        ]
+
 
 viewSecondList : List String -> String -> Html Msg
 viewSecondList list secondWord =
-    div [] [
-        h3 [] [text "Ord som slutter med \"", text secondWord, text "\""]
-        ,ul [] (List.map (\l -> li [] [text l, text secondWord]) list)
-    ]
+    div []
+        [ h3 [] [ text "Ord som slutter med \"", text secondWord, text "\"" ]
+        , ul [] (List.map (\l -> li [] [ text l, text secondWord ]) list)
+        ]
 
 
 viewFailiure : Html Msg
