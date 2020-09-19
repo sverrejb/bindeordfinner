@@ -5,8 +5,8 @@ import json
 
 def lambda_handler(event, context):
     body = json.loads(event["body"])
-    first_word = body['first']
-    second_word = body['second']
+    first_word = body['first'].lower()
+    second_word = body['second'].lower()
 
     solutions = find_glueword(first_word, second_word)
 
