@@ -1,13 +1,13 @@
 module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch, init, main, queryEncoder, resultDecoder, update, view)
 
-import Browser exposing (Document, document)
+import Browser exposing (document)
 import Element exposing (Color, Element, alignBottom, alignLeft, alignRight, alignTop, centerX, column, el, fill, height, layout, padding, paddingXY, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html exposing (Html, button, h1)
+import Html exposing (Html, button)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
