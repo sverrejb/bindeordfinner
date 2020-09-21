@@ -1,9 +1,11 @@
 module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch, init, main, queryEncoder, resultDecoder, update, view)
 
 import Browser
-import Html exposing (Html, button, div, h1, h2, h3, header, input, li, main_, p, text, ul)
-import Html.Attributes exposing (placeholder)
-import Html.Events exposing (onClick, onInput)
+import Element exposing (..)
+import Element.Background as Background
+import Element.Input as Input
+import Element.Region as Region
+import Html exposing (Html)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
@@ -29,6 +31,7 @@ type alias Model =
     , result : SearchResult
     }
 
+type WordType = First | Second
 
 type SearchResult
     = Failiure
@@ -94,82 +97,133 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ header [] [ h1 [] [ text "Bindeordfinner" ] ]
-        , main_ []
-            [ p [] [ text "Fyll inn start- og sluttordet for å finne bindeordet i midten" ]
-            , viewApp model
-            ]
+    layout
+        [ Background.color <| rgb255 70 83 98
+        ]
+    <|
+        column [ padding 12, centerX, height fill, Background.color <| rgb255 194 234 189 ] [ viewHeader, viewSearch model, viewResultStates model.result ]
+
+
+viewHeader : Element Msg
+viewHeader =
+    el [Region.heading 1, centerX] <| text "Bindeordfinner"
+
+
+viewSearch : Model -> Element Msg
+viewSearch model =
+    row [ spacing 36]
+        [ Input.text []
+            { onChange = UpdateFirst
+            , text = model.first
+            , placeholder = Nothing
+            , label = Input.labelAbove [] <| text "Første ord"
+            }
+            ,
+            Input.text []
+            { onChange = UpdateSecond
+            , text = model.second
+            , placeholder = Nothing
+            , label = Input.labelAbove [] <| text "Andre ord"
+            }
+            ,
+            Input.button []
+            {label = text "Søk"
+            , onPress = Just <| Search <| QueryBody model.first model.second}
         ]
 
-
-viewApp : Model -> Html Msg
-viewApp model =
-    main_ []
-        [ input [ placeholder firstPlaceholder, onInput UpdateFirst ] []
-        , input [ placeholder secondPlaceholder, onInput UpdateSecond ] []
-        , button [ onClick <| Search (QueryBody model.first model.second) ] [ text "SØK" ]
-        , viewResult model.result
-        ]
-
-
-viewResult : SearchResult -> Html Msg
-viewResult result =
+viewResultStates : SearchResult -> Element Msg
+viewResultStates result =
     case result of
-        Loading ->
-            viewLoading
+        Loading -> text "Laster"
+        Success response -> viewResult response
+        Failiure -> text "Noe gikk galt"
 
-        Success solutionResponse ->
-            if List.length solutionResponse.solutions > 0 then
-                div []
-                    [ h2 [] [ text "Mulige løsninger:" ]
-                    , ul [] (List.map (\l -> viewResultItem l solutionResponse.firstWord solutionResponse.secondWord) solutionResponse.solutions)
-                    ]
+viewResult : SearchResultBody -> Element Msg
+viewResult searchResult = 
+    column [ spacing 36] [
+        el [] <| text "Resultat"
+        ,column []  (List.map (\l -> viewResultItem l searchResult.firstWord searchResult.secondWord) searchResult.solutions)
+        ,row [ spaceEvenly ] [ el [alignTop, alignRight] <| viewWordlist searchResult.startsWith searchResult.firstWord First,
+                    el [alignTop, alignLeft] <| viewWordlist searchResult.endsWith searchResult.secondWord Second]
+    ]
 
-            else
-                div []
-                    [ h2 [] [ text "Ingen nøyaktige treff." ]
-                    , p [] [ text "Viser ord som slutter og starter på søkeordene. Kanskje du finner svaret likevel?" ]
-                    , viewFirstList solutionResponse.startsWith solutionResponse.firstWord
-                    , viewSecondList solutionResponse.endsWith solutionResponse.secondWord
-                    ]
+viewWordlist : List String -> String -> WordType -> Element Msg
+viewWordlist list word wordtype =
+    column [] <| List.map (\l -> text l ) list
 
-        Failiure ->
-            viewFailiure
-
-
-viewResultItem : String -> String -> String -> Html Msg
+viewResultItem : String -> String -> String -> Element Msg
 viewResultItem resultItem firstWord secondWord =
-    li [] [ text <| interpolate "{0} - som gir {1}{0} og {0}{2}" [ resultItem, firstWord, secondWord ] ]
+    el [] <| text <| interpolate "{0} - som gir {1}{0} og {0}{2}" [ resultItem, firstWord, secondWord ]
 
 
-viewLoading : Html Msg
-viewLoading =
-    p [] [ text "Laster ..." ]
+{-
+   viewApp : Model -> Html Msg
+   viewApp model =
+       main_ []
+           [ input [ placeholder firstPlaceholder, onInput UpdateFirst ] []
+           , input [ placeholder secondPlaceholder, onInput UpdateSecond ] []
+           , button [ onClick <| Search (QueryBody model.first model.second) ] [ text "SØK" ]
+           , viewResult model.result
+           ]
 
 
-viewFirstList : List String -> String -> Html Msg
-viewFirstList list firstWord =
-    div []
-        [ h3 [] [ text "Ord som starter med \"", text firstWord, text "\"" ]
-        , ul [] (List.map (\l -> li [] [ text firstWord, text l ]) list)
-        ]
+   viewResult : SearchResult -> Html Msg
+   viewResult result =
+       case result of
+           Loading ->
+               viewLoading
+
+           Success solutionResponse ->
+               if List.length solutionResponse.solutions > 0 then
+                   div []
+                       [ h2 [] [ text "Mulige løsninger:" ]
+                       , ul [] (List.map (\l -> viewResultItem l solutionResponse.firstWord solutionResponse.secondWord) solutionResponse.solutions)
+                       ]
+
+               else
+                   div []
+                       [ h2 [] [ text "Ingen nøyaktige treff." ]
+                       , p [] [ text "Viser ord som slutter og starter på søkeordene. Kanskje du finner svaret likevel?" ]
+                       , viewFirstList solutionResponse.startsWith solutionResponse.firstWord
+                       , viewSecondList solutionResponse.endsWith solutionResponse.secondWord
+                       ]
+
+           Failiure ->
+               viewFailiure
 
 
-viewSecondList : List String -> String -> Html Msg
-viewSecondList list secondWord =
-    div []
-        [ h3 [] [ text "Ord som slutter med \"", text secondWord, text "\"" ]
-        , ul [] (List.map (\l -> li [] [ text l, text secondWord ]) list)
-        ]
+   viewResultItem : String -> String -> String -> Html Msg
+   viewResultItem resultItem firstWord secondWord =
+       li [] [ text <| interpolate "{0} - som gir {1}{0} og {0}{2}" [ resultItem, firstWord, secondWord ] ]
 
 
-viewFailiure : Html Msg
-viewFailiure =
-    p [] [ text "Noe gikk galt. Prøv igjen." ]
+   viewLoading : Html Msg
+   viewLoading =
+       p [] [ text "Laster ..." ]
 
 
+   viewFirstList : List String -> String -> Html Msg
+   viewFirstList list firstWord =
+       div []
+           [ h3 [] [ text "Ord som starter med \"", text firstWord, text "\"" ]
+           , ul [] (List.map (\l -> li [] [ text firstWord, text l ]) list)
+           ]
 
+
+   viewSecondList : List String -> String -> Html Msg
+   viewSecondList list secondWord =
+       div []
+           [ h3 [] [ text "Ord som slutter med \"", text secondWord, text "\"" ]
+           , ul [] (List.map (\l -> li [] [ text l, text secondWord ]) list)
+           ]
+
+
+   viewFailiure : Html Msg
+   viewFailiure =
+       p [] [ text "Noe gikk galt. Prøv igjen." ]
+
+
+-}
 -- HTTP
 
 
