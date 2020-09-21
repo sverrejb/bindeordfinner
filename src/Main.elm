@@ -1,13 +1,13 @@
 module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch, init, main, queryEncoder, resultDecoder, update, view)
 
-import Browser
+import Browser exposing (Document, document)
 import Element exposing (Color, Element, alignBottom, alignLeft, alignRight, alignTop, centerX, column, el, fill, height, layout, padding, paddingXY, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html exposing (Attribute, Html, button)
+import Html exposing (Html, button, h1)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
@@ -20,7 +20,7 @@ import String.Interpolate exposing (interpolate)
 
 main : Program () Model Msg
 main =
-    Browser.element { init = init, subscriptions = \_ -> Sub.none, update = update, view = view }
+    Browser.document { init = init, subscriptions = \_ -> Sub.none, update = update, view = document }
 
 
 
@@ -106,12 +106,18 @@ update msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
+document : Model -> Browser.Document Msg
+document model =
+    { title = "Bindeordfinner", body = view model }
+
+
+view : Model -> List (Html Msg)
 view model =
-    layout
-        [ Background.color bgcolor1]
-    <|
+    [ layout
+        [ Background.color bgcolor1 ]
+      <|
         column [ padding 12, spacing 36, centerX, height fill, Background.color bgcolor2 ] [ viewHeader, viewSearch model, viewResultStates model.result model.showLists ]
+    ]
 
 
 viewHeader : Element Msg
@@ -167,20 +173,22 @@ viewResult searchResult showLists =
 viewWordResults : SearchResultBody -> Bool -> Element Msg
 viewWordResults searchResult showLists =
     if List.length searchResult.endsWith > 0 && List.length searchResult.startsWith > 0 then
-    column [ spacing 32 ]
-        [ Input.button
-            buttonAttrs
-            { label = text "Vis treff i ordbok", onPress = Just ToggleLists }
-        , if showLists then
-            row [ spacing 36 ]
-                [ el [ alignTop, alignRight ] <| viewWordlist searchResult.startsWith searchResult.firstWord First
-                , el [ alignTop, alignLeft ] <| viewWordlist searchResult.endsWith searchResult.secondWord Second
-                ]
+        column [ spacing 32 ]
+            [ Input.button
+                buttonAttrs
+                { label = text "Vis treff i ordbok", onPress = Just ToggleLists }
+            , if showLists then
+                row [ spacing 36 ]
+                    [ el [ alignTop, alignRight ] <| viewWordlist searchResult.startsWith searchResult.firstWord First
+                    , el [ alignTop, alignLeft ] <| viewWordlist searchResult.endsWith searchResult.secondWord Second
+                    ]
 
-          else
-            Element.none
-        ]
-    else Element.none
+              else
+                Element.none
+            ]
+
+    else
+        Element.none
 
 
 viewWordlist : List String -> String -> WordPosition -> Element Msg
