@@ -1,11 +1,13 @@
 module Main exposing (Model, Msg(..), QueryBody, SearchResult, apiUrl, doSearch, init, main, queryEncoder, resultDecoder, update, view)
 
 import Browser
-import Element exposing (..)
+import Element exposing (Color, Element, alignBottom, alignLeft, alignRight, alignTop, centerX, column, el, fill, height, layout, padding, paddingXY, rgb255, row, spacing, text, width)
 import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html exposing (Html)
+import Html exposing (Attribute, Html, button)
 import Http
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Encode as Encode
@@ -28,10 +30,15 @@ main =
 type alias Model =
     { first : String
     , second : String
+    , showLists : Bool
     , result : SearchResult
     }
 
-type WordType = First | Second
+
+type WordPosition
+    = First
+    | Second
+
 
 type SearchResult
     = Failiure
@@ -56,7 +63,7 @@ type alias SearchResultBody =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Model firstPlaceholder secondPlaceholder <| Success <| SearchResultBody firstPlaceholder secondPlaceholder resultsPlaceholder [] [], Cmd.none )
+    ( Model "" "" False <| Success <| SearchResultBody firstPlaceholder secondPlaceholder resultsPlaceholder [] [], Cmd.none )
 
 
 
@@ -68,6 +75,7 @@ type Msg
     | GotSearchResult (Result Http.Error SearchResultBody)
     | UpdateFirst String
     | UpdateSecond String
+    | ToggleLists
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -90,6 +98,9 @@ update msg model =
         UpdateSecond newSecond ->
             ( { model | second = newSecond }, Cmd.none )
 
+        ToggleLists ->
+            ( { model | showLists = not model.showLists }, Cmd.none )
+
 
 
 -- VIEW
@@ -98,132 +109,111 @@ update msg model =
 view : Model -> Html Msg
 view model =
     layout
-        [ Background.color <| rgb255 70 83 98
-        ]
+        [ Background.color bgcolor1]
     <|
-        column [ padding 12, centerX, height fill, Background.color <| rgb255 194 234 189 ] [ viewHeader, viewSearch model, viewResultStates model.result ]
+        column [ padding 12, spacing 36, centerX, height fill, Background.color bgcolor2 ] [ viewHeader, viewSearch model, viewResultStates model.result model.showLists ]
 
 
 viewHeader : Element Msg
 viewHeader =
-    el [Region.heading 1, centerX] <| text "Bindeordfinner"
+    el [ Region.heading 1, centerX, Font.size 36 ] <| text "Bindeordfinner"
 
 
 viewSearch : Model -> Element Msg
 viewSearch model =
-    row [ spacing 36]
+    row [ spacing 36 ]
         [ Input.text []
             { onChange = UpdateFirst
             , text = model.first
-            , placeholder = Nothing
+            , placeholder = Just (Input.placeholder [] (text firstPlaceholder))
             , label = Input.labelAbove [] <| text "Første ord"
             }
-            ,
-            Input.text []
+        , Input.text []
             { onChange = UpdateSecond
             , text = model.second
-            , placeholder = Nothing
+            , placeholder = Just (Input.placeholder [] (text secondPlaceholder))
             , label = Input.labelAbove [] <| text "Andre ord"
             }
-            ,
-            Input.button []
-            {label = text "Søk"
-            , onPress = Just <| Search <| QueryBody model.first model.second}
+        , Input.button
+            buttonAttrs
+            { label = text "Søk"
+            , onPress = Just <| Search <| QueryBody model.first model.second
+            }
         ]
 
-viewResultStates : SearchResult -> Element Msg
-viewResultStates result =
+
+viewResultStates : SearchResult -> Bool -> Element Msg
+viewResultStates result showList =
     case result of
-        Loading -> text "Laster"
-        Success response -> viewResult response
-        Failiure -> text "Noe gikk galt"
+        Loading ->
+            text "Laster ..."
 
-viewResult : SearchResultBody -> Element Msg
-viewResult searchResult = 
-    column [ spacing 36] [
-        el [] <| text "Resultat"
-        ,column []  (List.map (\l -> viewResultItem l searchResult.firstWord searchResult.secondWord) searchResult.solutions)
-        ,row [ spaceEvenly ] [ el [alignTop, alignRight] <| viewWordlist searchResult.startsWith searchResult.firstWord First,
-                    el [alignTop, alignLeft] <| viewWordlist searchResult.endsWith searchResult.secondWord Second]
-    ]
+        Success response ->
+            viewResult response showList
 
-viewWordlist : List String -> String -> WordType -> Element Msg
-viewWordlist list word wordtype =
-    column [] <| List.map (\l -> text l ) list
+        Failiure ->
+            text "Noe gikk galt"
+
+
+viewResult : SearchResultBody -> Bool -> Element Msg
+viewResult searchResult showLists =
+    column [ paddingXY 0 12, spacing 24, width fill ]
+        [ el [ Region.heading 2 ] <| text "Resultat:"
+        , column [] (List.map (\l -> viewResultItem l searchResult.firstWord searchResult.secondWord) searchResult.solutions)
+        , viewWordResults searchResult showLists
+        ]
+
+
+viewWordResults : SearchResultBody -> Bool -> Element Msg
+viewWordResults searchResult showLists =
+    if List.length searchResult.endsWith > 0 && List.length searchResult.startsWith > 0 then
+    column [ spacing 32 ]
+        [ Input.button
+            buttonAttrs
+            { label = text "Vis treff i ordbok", onPress = Just ToggleLists }
+        , if showLists then
+            row [ spacing 36 ]
+                [ el [ alignTop, alignRight ] <| viewWordlist searchResult.startsWith searchResult.firstWord First
+                , el [ alignTop, alignLeft ] <| viewWordlist searchResult.endsWith searchResult.secondWord Second
+                ]
+
+          else
+            Element.none
+        ]
+    else Element.none
+
+
+viewWordlist : List String -> String -> WordPosition -> Element Msg
+viewWordlist list word wordPosition =
+    column [] <| listHeading wordPosition word :: List.map (\l -> text <| listWord wordPosition word l) list
+
 
 viewResultItem : String -> String -> String -> Element Msg
 viewResultItem resultItem firstWord secondWord =
     el [] <| text <| interpolate "{0} - som gir {1}{0} og {0}{2}" [ resultItem, firstWord, secondWord ]
 
 
-{-
-   viewApp : Model -> Html Msg
-   viewApp model =
-       main_ []
-           [ input [ placeholder firstPlaceholder, onInput UpdateFirst ] []
-           , input [ placeholder secondPlaceholder, onInput UpdateSecond ] []
-           , button [ onClick <| Search (QueryBody model.first model.second) ] [ text "SØK" ]
-           , viewResult model.result
-           ]
+listHeading : WordPosition -> String -> Element Msg
+listHeading wordPosition word =
+    case wordPosition of
+        First ->
+            el [] <| text ("Ord som begynner på \"" ++ word ++ "\":")
+
+        Second ->
+            el [] <| text ("Ord som slutter på \"" ++ word ++ "\":")
 
 
-   viewResult : SearchResult -> Html Msg
-   viewResult result =
-       case result of
-           Loading ->
-               viewLoading
+listWord : WordPosition -> String -> String -> String
+listWord wordPosition word l =
+    case wordPosition of
+        First ->
+            word ++ l
 
-           Success solutionResponse ->
-               if List.length solutionResponse.solutions > 0 then
-                   div []
-                       [ h2 [] [ text "Mulige løsninger:" ]
-                       , ul [] (List.map (\l -> viewResultItem l solutionResponse.firstWord solutionResponse.secondWord) solutionResponse.solutions)
-                       ]
-
-               else
-                   div []
-                       [ h2 [] [ text "Ingen nøyaktige treff." ]
-                       , p [] [ text "Viser ord som slutter og starter på søkeordene. Kanskje du finner svaret likevel?" ]
-                       , viewFirstList solutionResponse.startsWith solutionResponse.firstWord
-                       , viewSecondList solutionResponse.endsWith solutionResponse.secondWord
-                       ]
-
-           Failiure ->
-               viewFailiure
+        Second ->
+            l ++ word
 
 
-   viewResultItem : String -> String -> String -> Html Msg
-   viewResultItem resultItem firstWord secondWord =
-       li [] [ text <| interpolate "{0} - som gir {1}{0} og {0}{2}" [ resultItem, firstWord, secondWord ] ]
 
-
-   viewLoading : Html Msg
-   viewLoading =
-       p [] [ text "Laster ..." ]
-
-
-   viewFirstList : List String -> String -> Html Msg
-   viewFirstList list firstWord =
-       div []
-           [ h3 [] [ text "Ord som starter med \"", text firstWord, text "\"" ]
-           , ul [] (List.map (\l -> li [] [ text firstWord, text l ]) list)
-           ]
-
-
-   viewSecondList : List String -> String -> Html Msg
-   viewSecondList list secondWord =
-       div []
-           [ h3 [] [ text "Ord som slutter med \"", text secondWord, text "\"" ]
-           , ul [] (List.map (\l -> li [] [ text l, text secondWord ]) list)
-           ]
-
-
-   viewFailiure : Html Msg
-   viewFailiure =
-       p [] [ text "Noe gikk galt. Prøv igjen." ]
-
-
--}
 -- HTTP
 
 
@@ -277,3 +267,33 @@ secondPlaceholder =
 resultsPlaceholder : List String
 resultsPlaceholder =
     [ "eple", "farge" ]
+
+
+bgcolor1 : Color
+bgcolor1 =
+    rgb255 156 173 164
+
+
+bgcolor2 : Color
+bgcolor2 =
+    rgb255 251 226 229
+
+
+buttoncolor : Color
+buttoncolor =
+    rgb255 250 190 167
+
+
+buttonAttrs : List (Element.Attribute msg)
+buttonAttrs =
+    [ alignBottom
+    , Background.color buttoncolor
+    , Font.color white
+    , paddingXY 32 14
+    , Border.rounded 3
+    ]
+
+
+white : Color
+white =
+    rgb255 255 255 255
