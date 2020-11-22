@@ -8,6 +8,9 @@ def lambda_handler(event, context):
     first_word = body['first'].lower()
     second_word = body['second'].lower()
 
+    if first_word == '' or second_word == '':
+        return []
+
     solutions = find_glueword(first_word, second_word)
 
     return {
